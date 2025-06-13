@@ -96,15 +96,29 @@ class MagazynApp(tk.Tk):
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
+
+        # Dodaj produkt
         cursor.execute("""
             INSERT INTO Produkty (Nazwa, Kategoria, Cena, Ilosc, LokalizacjaID) 
             VALUES (?, ?, ?, ?, ?)
         """, (nazwa, kategoria, cena, ilosc, lokalizacja_id))
+        produkt_id = cursor.lastrowid  # ID dodanego produktu
+
+        # Dodaj operację magazynową typu "Dostawa"
+        data_operacji = datetime.now().strftime("%Y-%m-%d")
+        cursor.execute("""
+            INSERT INTO OperacjeMagazynowe (ProduktID, TypOperacji, DataOperacji, Ilosc, Uwagi)
+            VALUES (?, 'Dostawa', ?, ?, ?)
+        """, (produkt_id, data_operacji, ilosc, f'Dodano nowy produkt: {nazwa}'))
+
         conn.commit()
         conn.close()
 
         self.load_products()
         messagebox.showinfo("Sukces", "Produkt dodany!")
+        self.load_products_for_order()
+        self.load_operations()
+
 
 #Frame operacje
     def create_operacje_tab(self):
@@ -389,7 +403,7 @@ class MagazynApp(tk.Tk):
                 # Dodaj operację magazynową
                 cursor.execute("""
                     INSERT INTO OperacjeMagazynowe (ProduktID, TypOperacji, DataOperacji, Ilosc, Uwagi)
-                    VALUES (?, 'sprzedaz', ?, ?, ?)
+                    VALUES (?, 'Zamówienie', ?, ?, ?)
                 """, (produkt_id, data, ilosc, f"Zamówienie klienta {klient_name}"))
 
             conn.commit()
