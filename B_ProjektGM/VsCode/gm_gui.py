@@ -413,7 +413,8 @@ class MagazynApp(tk.Tk):
             self.load_products_for_order()
             self.load_orders()
             self.load_pozycje()
-            self.load_operations
+            self.load_operations()
+            self.LoadZamowienieCombo()
 
         except Exception as e:
             conn.rollback()
@@ -476,24 +477,62 @@ class MagazynApp(tk.Tk):
         conn.close()
 
     def delete_order(self):
-        selected_item=self.orders_tree.selection()
+        selected_item = self.orders_tree.selection()
         if not selected_item:
-            messagebox.showerror("Błąd","Nie wybrano żadnej pozycji")
+            messagebox.showerror("Błąd", "Nie wybrano żadnej pozycji")
             return
-        order_id=self.orders_tree.item(selected_item, "values")[0]
+
+        order_id = self.orders_tree.item(selected_item, "values")[0]
 
         try:
-            conn=sqlite3.connect(DB_PATH)
-            cursor=conn.cursor()
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+
+            # Pobierz pozycje zamówienia przed usunięciem
+            cursor.execute("""
+                SELECT ProduktID, Ilosc 
+                FROM PozycjeZamowienia 
+                WHERE ZamowienieID = ?
+            """, (order_id,))
+            pozycje = cursor.fetchall()
+
+            data_operacji = datetime.now().strftime("%Y-%m-%d")
+
+            for produkt_id, ilosc in pozycje:
+                # Zwiększ stan magazynowy produktu
+                cursor.execute("""
+                    UPDATE Produkty 
+                    SET Ilosc = Ilosc + ? 
+                    WHERE ProduktID = ?
+                """, (ilosc, produkt_id))
+
+                # Dodaj operację magazynową "Zwrot"
+                cursor.execute("""
+                    INSERT INTO OperacjeMagazynowe (ProduktID, TypOperacji, DataOperacji, Ilosc, Uwagi)
+                    VALUES (?, 'Zwrot', ?, ?, ?)
+                """, (produkt_id, data_operacji, ilosc, f"Zwrot z usuniętego zamówienia ID {order_id}"))
+
+            # Usuń pozycje zamówienia
+            cursor.execute("DELETE FROM PozycjeZamowienia WHERE ZamowienieID = ?", (order_id,))
+
+            # Usuń samo zamówienie
             cursor.execute("DELETE FROM Zamowienia WHERE ZamowienieID = ?", (order_id,))
+
             conn.commit()
-            messagebox.showinfo("INFO",f"Usunięto rekordo ID: {order_id}")
+            messagebox.showinfo("INFO", f"Zamówienie (ID: {order_id}) usunięte, produkty zwrócone do magazynu.")
+        
         except sqlite3.Error as e:
-            messagebox.showerror("Błąd",f"Błąd podczas usuwania {e}")
+            messagebox.showerror("Błąd", f"Błąd podczas usuwania: {e}")
+        
         finally:
             conn.close()
 
         self.load_orders()
+        self.load_pozycje()
+        self.load_products()
+        self.load_operations()
+        self.load_products_for_order()
+
 
     def FiltrujKlienta(self):
         klient_name=self.orders_client_combo.get()
@@ -542,7 +581,7 @@ class MagazynApp(tk.Tk):
         # Combobox z klientami
         self.poz_id_combo = ttk.Combobox(self.poz_filtry_lab, state="readonly")
         self.poz_id_combo.grid(row=0, column=0, padx=0, pady=5, sticky="w")
-        self.LoadZamowienieCombo(ZamID=self.poz_id_combo)
+        self.LoadZamowienieCombo()
 
         self.filtruj_button=ttk.Button(self.poz_filtry_lab, text="Filtruj", command=self.FiltrujZamID)
         self.filtruj_button.grid(row=0, column=1, padx=5, pady=5, sticky="w")
@@ -551,7 +590,7 @@ class MagazynApp(tk.Tk):
         self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="w")
 
 
-        self.odswiez_button=ttk.Button(self.poz_filtry_lab, text="Odśwież", command=self.LoadZamowienieCombo(ZamID=self.poz_id_combo))
+        self.odswiez_button=ttk.Button(self.poz_filtry_lab, text="Odśwież", command=self.LoadZamowienieCombo)
         self.odswiez_button.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
 
@@ -567,7 +606,7 @@ class MagazynApp(tk.Tk):
             self.pozycje_tree.insert("", "end", values=(PozID, ZamID, ProID, Il, Cen, CenB))
         conn.close()
 
-    def LoadZamowienieCombo(self, ZamID):
+    def LoadZamowienieCombo(self):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT ZamowienieID FROM Zamowienia")
@@ -575,7 +614,7 @@ class MagazynApp(tk.Tk):
         conn.close()
 
         self.zam_map = [zid[0] for zid in Zamowienia]
-        ZamID["values"] = self.zam_map
+        self.poz_id_combo["values"] = self.zam_map
 
     def FiltrujZamID(self):
         zam_id = self.poz_id_combo.get()
