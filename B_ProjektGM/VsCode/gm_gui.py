@@ -1,10 +1,11 @@
-import sqlite3
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import ttk
 import os
+import sqlite3
+from tkinter import messagebox
 from datetime import datetime
-import matplotlib.pyplot as plt 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg 
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mini_allegro.db")
 
@@ -12,11 +13,28 @@ class MagazynApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("System Magazynowy - Mini Allegro")
-        self.geometry("950x600")
-        self.configure(bg="white")
+        self.geometry("1100x700")
+        self.minsize(900, 600)
+        self.configure(bg="#f5f7fa")  # Jasne tło
 
+        # Styl ttk
+        style = ttk.Style(self)
+        style.theme_use("clam")
+        style.configure("TNotebook", background="#e3eaf2", borderwidth=0)
+        style.configure("TFrame", background="#f5f7fa")
+        style.configure("TLabel", background="#f5f7fa", font=("Segoe UI", 11))
+        style.configure("TButton", font=("Segoe UI", 11), padding=6)
+        style.configure("Treeview.Heading", font=("Segoe UI", 11, "bold"), background="#1976d2", foreground="white")
+        style.configure("Treeview", font=("Segoe UI", 10), rowheight=28, background="#ffffff", fieldbackground="#f5f7fa")
+        style.map("TButton", background=[("active", "#1976d2")], foreground=[("active", "white")])
+
+        # Nagłówek aplikacji
+        header = ttk.Label(self, text="Mini Allegro - System Magazynowy", font=("Segoe UI", 18, "bold"), background="#1976d2", foreground="white", anchor="center")
+        header.pack(fill="x", pady=(0, 5))
+
+        # Notebook
         self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill="both", expand=True)
+        self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.create_produkty_tab()
         self.create_operacje_tab()
@@ -33,6 +51,8 @@ class MagazynApp(tk.Tk):
     def create_produkty_tab(self):
         self.produkty_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.produkty_frame, text="Produkty")
+        self.produkty_frame.grid_rowconfigure(0, weight=1)
+        self.produkty_frame.grid_columnconfigure(0, weight=1)
 
         self.tree = ttk.Treeview(
             self.produkty_frame,
@@ -41,35 +61,45 @@ class MagazynApp(tk.Tk):
         )
         for col in self.tree["columns"]:
             self.tree.heading(col, text=col)
-        self.tree.pack(fill="both", expand=True, pady=10)
+            self.tree.column(col, anchor="center", width=120)
+        self.tree.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
         self.load_products()
-
         self.entry_frame = ttk.Frame(self.produkty_frame)
-        self.entry_frame.pack(pady=5)
+        self.entry_frame.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
+        self.entry_frame.grid_columnconfigure(0, weight=1)
+        self.entry_frame.grid_columnconfigure(1, weight=1)
+        self.entry_frame.grid_columnconfigure(2, weight=1)
+        self.entry_frame.grid_columnconfigure(3, weight=1)
+        self.entry_frame.grid_columnconfigure(4, weight=1)
+        self.entry_frame.grid_columnconfigure(5, weight=1)
 
-        self.name_entry = ttk.Entry(self.entry_frame, width=25)
-        self.name_entry.insert(0, "Nazwa produktu")
-        self.name_entry.grid(row=0, column=0, padx=5)
+        # Etykiety nad polami
+        labels = ["Nazwa produktu", "Kategoria", "Cena", "Ilość", "LokalizacjaID"]
+        for i, text in enumerate(labels):
+            label = ttk.Label(self.entry_frame, text=text)
+            label.grid(row=0, column=i, padx=5, pady=(5, 0), sticky="w")
 
-        self.kategoria_entry = ttk.Entry(self.entry_frame, width=15)
-        self.kategoria_entry.insert(0, "Kategoria")
-        self.kategoria_entry.grid(row=0, column=1, padx=5)
+        # Pola Entry pod etykietami
+        self.name_entry = ttk.Entry(self.entry_frame, width=25, font=("Segoe UI", 11))
+        self.name_entry.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 
-        self.price_entry = ttk.Entry(self.entry_frame, width=10)
-        self.price_entry.insert(0, "Cena")
-        self.price_entry.grid(row=0, column=2, padx=5)
+        self.kategoria_entry = ttk.Entry(self.entry_frame, width=15, font=("Segoe UI", 11))
+        self.kategoria_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        self.qty_entry = ttk.Entry(self.entry_frame, width=10)
-        self.qty_entry.insert(0, "Ilość")
-        self.qty_entry.grid(row=0, column=3, padx=5)
+        self.price_entry = ttk.Entry(self.entry_frame, width=10, font=("Segoe UI", 11))
+        self.price_entry.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
+        self.price_entry.insert(0, "")
 
-        self.lokalizacja_entry = ttk.Entry(self.entry_frame, width=10)
-        self.lokalizacja_entry.insert(0, "LokalizacjaID")
-        self.lokalizacja_entry.grid(row=0, column=4, padx=5)
+        self.qty_entry = ttk.Entry(self.entry_frame, width=10, font=("Segoe UI", 11))
+        self.qty_entry.grid(row=1, column=3, padx=5, pady=5, sticky="ew")
+        self.qty_entry.insert(0, 0)
+
+        self.lokalizacja_entry = ttk.Entry(self.entry_frame, width=10, font=("Segoe UI", 11))
+        self.lokalizacja_entry.grid(row=1, column=4, padx=5, pady=5, sticky="ew")
 
         add_button = ttk.Button(self.entry_frame, text="Dodaj produkt", command=self.add_product)
-        add_button.grid(row=0, column=5, padx=5)
+        add_button.grid(row=1, column=5, padx=10, pady=5, sticky="ew")
 
     def load_products(self):
         for row in self.tree.get_children():
@@ -83,16 +113,38 @@ class MagazynApp(tk.Tk):
         conn.close()
 
     def add_product(self):
-        nazwa = self.name_entry.get()
-        kategoria = self.kategoria_entry.get()
-        try:
-            cena = float(self.price_entry.get())
-            ilosc = int(self.qty_entry.get())
-            lokalizacja_id = self.lokalizacja_entry.get()
-            lokalizacja_id = int(lokalizacja_id) if lokalizacja_id else None
-        except ValueError:
-            messagebox.showerror("Błąd", "Cena, ilość i lokalizacja muszą być liczbami (lub pusta lokalizacja)!")
+        nazwa = self.name_entry.get().strip()
+        if not nazwa:
+            messagebox.showerror("Błąd", "Nazwa produktu nie może być pusta!")
             return
+        kategoria = self.kategoria_entry.get()
+        if not kategoria:
+            messagebox.showerror("Błąd", "Kategoria nie może być pusta!")
+            return
+        cena_str = self.price_entry.get().strip()
+        if not cena_str:
+            messagebox.showerror("Błąd", "Cena nie może być pusta!")
+            return
+        try:
+            cena = float(cena_str.replace(",", "."))  # Zamiana przecinka na kropkę
+        except ValueError:
+            messagebox.showerror("Błąd", "Cena musi być liczbą (np. 1200.50)!")
+            return
+        try:
+            ilosc = int(self.qty_entry.get())
+        except ValueError:
+            messagebox.showerror("Błąd", "Ilość musi być liczbą całkowitą!")
+            return
+        lokalizacja_id = self.lokalizacja_entry.get()
+        if lokalizacja_id:
+            try:
+                lokalizacja_id = int(lokalizacja_id)
+            except ValueError:
+                messagebox.showerror("Błąd", "Lokalizacja musi być liczbą lub pusta!")
+                return
+        else:
+            lokalizacja_id = None
+
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -132,7 +184,11 @@ class MagazynApp(tk.Tk):
         )
         for col in self.operacje_tree["columns"]:
             self.operacje_tree.heading(col, text=col)
-        self.operacje_tree.pack(fill="both", expand=True, pady=10)
+            self.operacje_tree.column(col, anchor="center", width=120)
+        self.operacje_tree.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.operacje_frame.grid_rowconfigure(0, weight=1)
+        self.operacje_frame.grid_columnconfigure(0, weight=1)
 
         self.load_operations()
 
@@ -175,28 +231,38 @@ class MagazynApp(tk.Tk):
 
 
         #Frame danych
-        self.data_frame=ttk.LabelFrame(self.zamowienia_frame, text="Dane", padding=1)
-        self.data_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        self.dane_frame=ttk.LabelFrame(self.zamowienia_frame, text="Dane", padding=1)
+        self.dane_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         #Ustawienie wielkości grida danych
         self.zamowienia_frame.grid_rowconfigure(1, weight=1)
 
-       
-        self.countInput = ttk.Entry(self.data_frame, width=10)
-        self.countInput.insert(0, "Ilosc")
-        self.countInput.grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        # Etykieta i pole ID
+        self.label_id = ttk.Label(self.dane_frame, text="ID produktu")
+        self.label_id.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
+        self.product_SelectedId = ttk.Entry(self.dane_frame, width=10)
+        self.product_SelectedId.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 
+        # Etykieta i pole Ilość
+        self.label_ilosc = ttk.Label(self.dane_frame, text="Ilość")
+        self.label_ilosc.grid(row=0, column=1, padx=5, pady=(5, 0), sticky="w")
+        self.countInput = ttk.Entry(self.dane_frame, width=10)
+        self.countInput.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        #Dane dodatkowe
-        self.total_price=ttk.Label(self.data_frame, state="readonly", text="Cena")
-        self.total_price.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        # Etykieta i pole Cena (readonly)
+        self.label_cena = ttk.Label(self.dane_frame, text="Cena")
+        self.label_cena.grid(row=0, column=2, padx=5, pady=(5, 0), sticky="w")
+        self.price_var = tk.StringVar()
+        self.price_entry = ttk.Entry(self.dane_frame, textvariable=self.price_var, width=12, state="readonly")
+        self.price_entry.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
 
-        self.product_SelectedId=ttk.Entry(self.data_frame, width=5)
-        self.product_SelectedId.insert(0, "ID")
-        self.product_SelectedId.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-        
         # Przycisk składania zamówienia
         order_button = ttk.Button(self.zamowienia_frame, text="Dodaj do koszyka", command=self.add_To_cart)
         order_button.grid(row=3, column=0, columnspan=2, pady=10, sticky="n")
+
+        self.product_SelectedId.bind("<KeyRelease>", self.on_id_entry)
+        self.countInput.bind("<KeyRelease>", lambda e: self.update_price())
+
+        self.products_tree.bind("<<TreeviewSelect>>", self.on_product_select)
 
     def load_clients(self, combo):
         """Wypełnia combobox listą klientów"""
@@ -218,67 +284,137 @@ class MagazynApp(tk.Tk):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT ProduktID, Nazwa, Ilosc, Cena FROM Produkty")
-        for produkt_id, nazwa, cena, ilosc in cursor.fetchall():
+        for produkt_id, nazwa, ilosc, cena in cursor.fetchall():
             # Kolumna "Zamawiana ilość" zaczyna od zera
-            self.products_tree.insert("", "end", values=(produkt_id, nazwa, cena, ilosc))
+            self.products_tree.insert("", "end", values=(produkt_id, nazwa, ilosc, cena))
         conn.close()
 
 #Metody koszyka
     def add_To_cart(self):
-        selected = self.products_tree.selection()
-        if not selected:
-            messagebox.showerror("Błąd", "Wybierz produkt z listy")
-            return
+        produkt_id_str = self.product_SelectedId.get().strip()
+        ilosc_str = self.countInput.get().strip()
 
-        produkt_values = self.products_tree.item(selected[0], "values")
-        produkt_id = int(produkt_values[0])
-        produkt_nazwa = produkt_values[1]
-        try:
-            dostepna_ilosc = float(produkt_values[2])
-            produkt_cena = float(produkt_values[3])
-            ilosc = float(self.countInput.get())
-        except ValueError:
-            messagebox.showerror("Błąd", "Nieprawidłowe dane liczbowe")
-            return
-
-        if ilosc <= 0:
-            messagebox.showerror("Błąd", "Ilość musi być większa niż zero")
-            return
-
-        # Sprawdź, ile jest już w koszyku danego produktu
-        ilosc_w_koszyku = 0
-        for item in self.cart_items:
-            if item["ProduktID"] == produkt_id:
-                ilosc_w_koszyku = item["Ilosc"]
-                break
-
-        if ilosc + ilosc_w_koszyku > dostepna_ilosc:
-            messagebox.showerror("Błąd", "Brak wystarczającej ilości produktu po dodaniu do koszyka")
-            return
-
-        # Jeśli produkt już jest w koszyku, aktualizuj ilość i cenę brutto
-        for item in self.cart_items:
-            if item["ProduktID"] == produkt_id:
-                item["Ilosc"] += ilosc
-                item["CenaBrutto"] = item["Ilosc"] * produkt_cena
-                self.refresh_cart_tree()
-                self.load_products_for_order()
+        # 1. Priorytet: wpisane ID i ilość
+        if produkt_id_str and ilosc_str:
+            if not produkt_id_str.isdigit():
+                messagebox.showerror("Błąd", "ID produktu musi być liczbą całkowitą.")
+                return
+            produkt_id = int(produkt_id_str)
+            try:
+                ilosc = float(ilosc_str)
+            except ValueError:
+                messagebox.showerror("Błąd", "Ilość musi być liczbą.")
                 return
 
-        # Jeśli produktu nie ma, dodaj nowy wpis
-        cena_brutto = ilosc * produkt_cena
+            # Pobierz dane produktu z bazy
+            import sqlite3
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT Nazwa, Ilosc, Cena FROM Produkty WHERE ProduktID = ?", (produkt_id,))
+            row = cursor.fetchone()
+            conn.close()
 
-        self.cart_items.append({
-            "ProduktID": produkt_id,
-            "Nazwa": produkt_nazwa,
-            "Ilosc": ilosc,
-            "Cena": produkt_cena,
-            "CenaBrutto": cena_brutto
-        })
+            if not row:
+                messagebox.showerror("Błąd", f"Nie znaleziono produktu o ID {produkt_id}.")
+                return
 
-        self.refresh_cart_tree()
-        self.load_products_for_order()
-        self.load_operations()
+            produkt_nazwa, dostepna_ilosc, produkt_cena = row
+
+            # Sprawdź, ile już jest w koszyku danego produktu
+            ilosc_w_koszyku = 0
+            for item in self.cart_items:
+                if item["ProduktID"] == produkt_id:
+                    ilosc_w_koszyku = item["Ilosc"]
+                    break
+
+            if ilosc <= 0:
+                messagebox.showerror("Błąd", "Ilość musi być większa niż zero.")
+                return
+
+            if ilosc + ilosc_w_koszyku > dostepna_ilosc:
+                messagebox.showerror("Błąd", "Brak wystarczającej ilości produktu po dodaniu do koszyka.")
+                return
+
+            # Jeśli produkt już jest w koszyku, aktualizuj ilość i cenę brutto
+            for item in self.cart_items:
+                if item["ProduktID"] == produkt_id:
+                    item["Ilosc"] += ilosc
+                    item["CenaBrutto"] = item["Ilosc"] * produkt_cena
+                    self.refresh_cart_tree()
+                    self.load_products_for_order()
+                    return
+
+            # Jeśli produktu nie ma, dodaj nowy wpis
+            cena_brutto = ilosc * produkt_cena
+            self.cart_items.append({
+                "ProduktID": produkt_id,
+                "Nazwa": produkt_nazwa,
+                "Ilosc": ilosc,
+                "Cena": produkt_cena,
+                "CenaBrutto": cena_brutto
+            })
+
+            self.refresh_cart_tree()
+            self.load_products_for_order()
+            self.load_operations()
+            return
+
+        # 2. Jeśli nie wpisano ID, ale jest zaznaczenie w tabeli
+        selected = self.products_tree.selection()
+        if selected:
+            produkt_values = self.products_tree.item(selected[0], "values")
+            produkt_id = int(produkt_values[0])
+            produkt_nazwa = produkt_values[1]
+            try:
+                dostepna_ilosc = float(produkt_values[2])
+                produkt_cena = float(produkt_values[3])
+                ilosc = float(self.countInput.get())
+            except ValueError:
+                messagebox.showerror("Błąd", "Nieprawidłowe dane liczbowe.")
+                return
+
+            if ilosc <= 0:
+                messagebox.showerror("Błąd", "Ilość musi być większa niż zero.")
+                return
+
+            # Sprawdź, ile już jest w koszyku danego produktu
+            ilosc_w_koszyku = 0
+            for item in self.cart_items:
+                if item["ProduktID"] == produkt_id:
+                    ilosc_w_koszyku = item["Ilosc"]
+                    break
+
+            if ilosc + ilosc_w_koszyku > dostepna_ilosc:
+                messagebox.showerror("Błąd", "Brak wystarczającej ilości produktu po dodaniu do koszyka.")
+                return
+
+            # Jeśli produkt już jest w koszyku, aktualizuj ilość i cenę brutto
+            for item in self.cart_items:
+                if item["ProduktID"] == produkt_id:
+                    item["Ilosc"] += ilosc
+                    item["CenaBrutto"] = item["Ilosc"] * produkt_cena
+                    self.refresh_cart_tree()
+                    self.load_products_for_order()
+                    return
+
+            # Jeśli produktu nie ma, dodaj nowy wpis
+            cena_brutto = ilosc * produkt_cena
+            self.cart_items.append({
+                "ProduktID": produkt_id,
+                "Nazwa": produkt_nazwa,
+                "Ilosc": ilosc,
+                "Cena": produkt_cena,
+                "CenaBrutto": cena_brutto
+            })
+
+            self.refresh_cart_tree()
+            self.load_products_for_order()
+            self.load_operations()
+            return
+
+        # 3. Jeśli nie wpisano ID i nie zaznaczono produktu
+        messagebox.showerror("Błąd", "Wpisz ID produktu i ilość lub zaznacz produkt na liście.")
+        return
 
     def reset_cart(self):
         self.cart_items.clear()
@@ -496,7 +632,7 @@ class MagazynApp(tk.Tk):
             """, (order_id,))
             pozycje = cursor.fetchall()
 
-            data_operacji = datetime.now().strftime("%Y-%m-%d")
+            data_operacji = datetime.now().strftime("%Y-%m-%d");
 
             for produkt_id, ilosc in pozycje:
                 # Zwiększ stan magazynowy produktu
@@ -653,6 +789,7 @@ class MagazynApp(tk.Tk):
         )
         self.analysis_selector.current(0)  # domyślnie "Typ operacji"
         self.analysis_selector.pack(pady=5)
+        self.analysis_selector.bind("<<ComboboxSelected>>", lambda e: self.run_analysis())
 
         # Pola daty OD i DO
         date_frame = ttk.Frame(self.analiza_frame)
@@ -787,6 +924,47 @@ class MagazynApp(tk.Tk):
         canvas = FigureCanvasTkAgg(fig, master=self.analiza_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(pady=10)
+
+    def update_price(self, *args):
+        produkt_id_str = self.product_SelectedId.get().strip()
+        ilosc_str = self.countInput.get().strip()
+        if produkt_id_str.isdigit() and ilosc_str.replace('.', '', 1).isdigit():
+            produkt_id = int(produkt_id_str)
+            ilosc = float(ilosc_str)
+            import sqlite3
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            cursor.execute("SELECT Cena FROM Produkty WHERE ProduktID = ?", (produkt_id,))
+            row = cursor.fetchone()
+            conn.close()
+            if row:
+                cena = row[0]
+                self.price_var.set(f"{cena * ilosc:.2f}")
+            else:
+                self.price_var.set("")
+        else:
+            self.price_var.set("")
+
+    def on_product_select(self, event):
+        selected = self.products_tree.selection()
+        if selected:
+            produkt_values = self.products_tree.item(selected[0], "values")
+            self.product_SelectedId.delete(0, tk.END)
+            self.product_SelectedId.insert(0, produkt_values[0])
+            self.countInput.delete(0, tk.END)  # Resetuj ilość
+            self.update_price()
+
+    def on_id_entry(self, event=None):
+        produkt_id = self.product_SelectedId.get().strip()
+        if produkt_id.isdigit():
+            for item in self.products_tree.get_children():
+                values = self.products_tree.item(item, "values")
+                if values and str(values[0]) == produkt_id:
+                    self.products_tree.selection_set(item)
+                    self.products_tree.see(item)
+                    break
+        self.update_price()
+
 
 
 if __name__ == "__main__":
