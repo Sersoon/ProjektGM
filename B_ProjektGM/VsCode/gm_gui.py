@@ -43,8 +43,8 @@ class MagazynApp(tk.Tk):
         self.create_orders_tab()
         self.cart_items = []
         self.create_PozycjeZam_tab()
-
         self.create_analiza_tab() 
+        
         
 
 #Frame produkty
@@ -303,10 +303,15 @@ class MagazynApp(tk.Tk):
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT OperacjaID, ProduktID, TypOperacji, DataOperacji, Ilosc, Uwagi FROM OperacjeMagazynowe ORDER BY DataOperacji DESC")
+        cursor.execute("""
+            SELECT OperacjaID, ProduktID, TypOperacji, DataOperacji, Ilosc, Uwagi
+            FROM OperacjeMagazynowe
+            ORDER BY OperacjaID DESC
+        """)
         for op in cursor.fetchall():
             self.operacje_tree.insert("", "end", values=op)
         conn.close()
+
 
 #Frame zamów
     def create_zamow_tab(self):
@@ -594,15 +599,16 @@ class MagazynApp(tk.Tk):
         self.cart_frame.grid_rowconfigure(0, weight=1)
 
         # Combobox z klientami
+        ttk.Label(self.cart_data_frame, text="Nazwisko:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.client_combo = ttk.Combobox(self.cart_data_frame, state="readonly")
-        self.client_combo.grid(row=0, column=0, padx=0, pady=5, sticky="w")
+        self.client_combo.grid(row=0, column=1, padx=0, pady=5, sticky="w")
         self.load_clients(combo=self.client_combo)
 
         refresh_button = ttk.Button(self.cart_data_frame, text="Odśwież koszyk", command=self.refresh_cart_tree)
-        refresh_button.grid(row=0, column=1, padx=10, pady=5, sticky="s")
+        refresh_button.grid(row=0, column=2, padx=10, pady=5, sticky="s")
 
         zapisz_button = ttk.Button(self.cart_data_frame, text="Zapisz zamowienie", command=self.add_zamowienie)
-        zapisz_button.grid(row=0, column=2, padx=5, pady=5, sticky="s")
+        zapisz_button.grid(row=0, column=3, padx=5, pady=5, sticky="s")
 
         reset_button=ttk.Button(self.cart_data_frame, text="Reset", command=self.reset_cart)
         reset_button.grid(row=0, column=4, padx=5, pady=5, sticky="s")
@@ -681,6 +687,7 @@ class MagazynApp(tk.Tk):
             self.load_pozycje()
             self.load_operations()
             self.LoadZamowienieCombo()
+            self.refresh_cart_tree()
 
         except Exception as e:
             conn.rollback()
@@ -691,43 +698,52 @@ class MagazynApp(tk.Tk):
 
 #Frame zamówienia
     def create_orders_tab(self):
-        self.orders_frame=ttk.Frame(self.notebook)
+        self.orders_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.orders_frame, text="Zamowienia")
 
-        #Orders label
-        self.orders_label=ttk.LabelFrame(self.orders_frame, text="Lista")
+        # Orders label
+        self.orders_label = ttk.LabelFrame(self.orders_frame, text="Lista")
         self.orders_label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.orders_frame.grid_rowconfigure(0, weight=5)
+        self.orders_frame.grid_columnconfigure(0, weight=1)  # Umożliwia rozciąganie w poziomie
 
-        self.test_button=ttk.Button(self.orders_frame, text="Usun rekord", command=self.delete_order)
-        self.test_button.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
-
-
+        # Treeview
         self.orders_tree = ttk.Treeview(
             self.orders_label,
-            columns=("ZamowienieID","KlientID", "DataZamowienia", "Kwota"),
+            columns=("ZamowienieID", "KlientID", "DataZamowienia", "Kwota"),
             show="headings"
         )
         for col in self.orders_tree["columns"]:
             self.orders_tree.heading(col, text=col)
         self.orders_tree.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
-        #filtry label
-        self.filtry_label=ttk.LabelFrame(self.orders_frame, text="Filtry")
+        # Treeview rozciąganie
+        self.orders_label.grid_rowconfigure(0, weight=1)
+        self.orders_label.grid_columnconfigure(0, weight=1)
+
+        # Przycisk testowy
+        self.test_button = ttk.Button(self.orders_frame, text="Usun zamówienie", command=self.delete_order)
+        self.test_button.grid(row=2, column=0, padx=5, pady=5, sticky="n")
+
+        # Filtry label
+        self.filtry_label = ttk.LabelFrame(self.orders_frame, text="Filtry")
         self.filtry_label.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.orders_frame.grid_rowconfigure(1, weight=1)
 
         # Combobox z klientami
+        ttk.Label(self.filtry_label, text="ID: ").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.orders_client_combo = ttk.Combobox(self.filtry_label, state="readonly")
-        self.orders_client_combo.grid(row=0, column=0, padx=0, pady=5, sticky="w")
+        self.orders_client_combo.grid(row=0, column=1, padx=0, pady=5, sticky="w")
         self.load_clients(combo=self.orders_client_combo)
         self.load_orders()
 
-        self.filtruj_button=ttk.Button(self.filtry_label, text="Filtruj", command=self.FiltrujKlienta)
-        self.filtruj_button.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        # Przyciski filtrów
+        self.filtruj_button = ttk.Button(self.filtry_label, text="Filtruj", command=self.FiltrujKlienta)
+        self.filtruj_button.grid(row=0, column=2, padx=5, pady=5, sticky="w")
 
-        self.reset_button=ttk.Button(self.filtry_label, text="Reset", command=self.load_orders)
-        self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.reset_button = ttk.Button(self.filtry_label, text="Reset", command=self.load_orders)
+        self.reset_button.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+
 
     def load_orders(self):
         """Ładuje produkty do tabeli w zakładce Zamówienia"""
@@ -736,7 +752,7 @@ class MagazynApp(tk.Tk):
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT ZamowienieID, KlientID, DataZamowienia, Kwota FROM Zamowienia")
+        cursor.execute("SELECT ZamowienieID, KlientID, DataZamowienia, Kwota FROM Zamowienia ORDER BY ZamowienieID DESC")
         for ZamowienieID, KlientID, DataZamowienia, Kwota in cursor.fetchall():
             # Kolumna "Zamawiana ilość" zaczyna od zera
             self.orders_tree.insert("", "end", values=(ZamowienieID, KlientID, DataZamowienia, Kwota))
@@ -820,44 +836,55 @@ class MagazynApp(tk.Tk):
 
 #Frame pozycja
     def create_PozycjeZam_tab(self):
-        self.pozycje_frame=ttk.Frame(self.notebook)
+        self.pozycje_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.pozycje_frame, text="PozycjeZamowien")
 
-        self.pozycja_label=ttk.LabelFrame(self.pozycje_frame, text="Pozycje")
+        # LabelFrame na Treeview
+        self.pozycja_label = ttk.LabelFrame(self.pozycje_frame, text="Pozycje")
         self.pozycja_label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+
         self.pozycje_frame.grid_rowconfigure(0, weight=5)
-        
+        self.pozycje_frame.grid_columnconfigure(0, weight=1)
+
+        # Treeview
         self.pozycje_tree = ttk.Treeview(
             self.pozycja_label,
-            columns=("PozycjaID","ZamowienieID", "ProduktID", "Ilosc", "Cena", "CenaBrutto"),
+            columns=("PozycjaID", "ZamowienieID", "ProduktID", "Ilosc", "Cena", "CenaBrutto"),
             show="headings"
         )
         for col in self.pozycje_tree["columns"]:
             self.pozycje_tree.heading(col, text=col)
+
         self.pozycje_tree.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
+        # Rozciąganie Treeview w LabelFrame
+        self.pozycja_label.grid_rowconfigure(0, weight=1)
+        self.pozycja_label.grid_columnconfigure(0, weight=1)
+
+        # Wczytanie danych
         self.load_pozycje()
 
-
-        #filtry label
-        self.poz_filtry_lab=ttk.LabelFrame(self.pozycje_frame, text="Filtry")
+        # LabelFrame z filtrami
+        self.poz_filtry_lab = ttk.LabelFrame(self.pozycje_frame, text="Filtry")
         self.poz_filtry_lab.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
         self.pozycje_frame.grid_rowconfigure(1, weight=1)
 
-        # Combobox z klientami
+        # Combobox z zamówieniami
+        ttk.Label(self.poz_filtry_lab, text="ID zamówienia: ").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.poz_id_combo = ttk.Combobox(self.poz_filtry_lab)
-        self.poz_id_combo.grid(row=0, column=0, padx=0, pady=5, sticky="w")
+        self.poz_id_combo.grid(row=0, column=1, padx=0, pady=5, sticky="w")
         self.LoadZamowienieCombo()
 
-        self.filtruj_button=ttk.Button(self.poz_filtry_lab, text="Filtruj", command=self.FiltrujZamID)
-        self.filtruj_button.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        # Przyciski filtrów
+        self.filtruj_button = ttk.Button(self.poz_filtry_lab, text="Filtruj", command=self.FiltrujZamID)
+        self.filtruj_button.grid(row=0, column=2, padx=5, pady=5, sticky="w")
 
-        self.reset_button=ttk.Button(self.poz_filtry_lab, text="Reset", command=self.load_pozycje)
-        self.reset_button.grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.reset_button = ttk.Button(self.poz_filtry_lab, text="Reset", command=self.load_pozycje)
+        self.reset_button.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
+        self.odswiez_button = ttk.Button(self.poz_filtry_lab, text="Odśwież", command=self.LoadZamowienieCombo)
+        self.odswiez_button.grid(row=0, column=4, padx=5, pady=5, sticky="w")
 
-        self.odswiez_button=ttk.Button(self.poz_filtry_lab, text="Odśwież", command=self.LoadZamowienieCombo)
-        self.odswiez_button.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
 
     
@@ -867,7 +894,7 @@ class MagazynApp(tk.Tk):
 
         conn=sqlite3.connect(DB_PATH)
         cursor=conn.cursor()
-        cursor.execute("SELECT PozycjaID, ZamowienieID, ProduktID, Ilosc, Cena, CenaBrutto from PozycjeZamowienia")
+        cursor.execute("SELECT PozycjaID, ZamowienieID, ProduktID, Ilosc, Cena, CenaBrutto from PozycjeZamowienia ORDER BY PozycjaID DESC")
         for PozID, ZamID, ProID, Il, Cen, CenB in cursor.fetchall():
             self.pozycje_tree.insert("", "end", values=(PozID, ZamID, ProID, Il, Cen, CenB))
         conn.close()
@@ -904,6 +931,8 @@ class MagazynApp(tk.Tk):
         for PozycjaID, ZamowienieID, ProduktID, Ilosc, Cena, CenaBrutto in cursor.fetchall():
             self.pozycje_tree.insert("", "end", values=(PozycjaID, ZamowienieID, ProduktID, Ilosc, Cena, CenaBrutto))
         conn.close()
+
+
 
 #Frame analiza
     def create_analiza_tab(self): 
