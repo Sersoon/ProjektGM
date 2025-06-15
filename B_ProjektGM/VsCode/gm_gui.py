@@ -13,7 +13,7 @@ class MagazynApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("System Magazynowy - Mini Allegro")
-        self.geometry("1100x700")
+        self.geometry("1250x700")
         self.minsize(900, 600)
         self.configure(bg="#f5f7fa")  # Jasne tło
 
@@ -87,19 +87,31 @@ class MagazynApp(tk.Tk):
         self.kategoria_entry = ttk.Entry(self.entry_frame, width=15, font=("Segoe UI", 11))
         self.kategoria_entry.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
 
-        self.price_entry = ttk.Entry(self.entry_frame, width=10, font=("Segoe UI", 11))
-        self.price_entry.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
-        self.price_entry.insert(0, "")
+        self.prod_price_entry = ttk.Entry(self.entry_frame, width=10, font=("Segoe UI", 11))
+        self.prod_price_entry.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
+        self.prod_price_entry.insert(0, 0)
 
         self.qty_entry = ttk.Entry(self.entry_frame, width=10, font=("Segoe UI", 11))
         self.qty_entry.grid(row=1, column=3, padx=5, pady=5, sticky="ew")
         self.qty_entry.insert(0, 0)
 
-        self.lokalizacja_entry = ttk.Entry(self.entry_frame, width=10, font=("Segoe UI", 11))
+        self.lokalizacja_entry = ttk.Combobox(self.entry_frame, width=10, font=("Segoe UI", 11), state="readonly")
         self.lokalizacja_entry.grid(row=1, column=4, padx=5, pady=5, sticky="ew")
+        self.Load_lokalizacja_combo()
 
         add_button = ttk.Button(self.entry_frame, text="Dodaj produkt", command=self.add_product)
         add_button.grid(row=1, column=5, padx=10, pady=5, sticky="ew")
+
+
+    def Load_lokalizacja_combo(self):
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT MagazynID FROM Magazyn")
+        Magazyn = cursor.fetchall()
+        conn.close()
+
+        self.lok_map = [zid[0] for zid in Magazyn]
+        self.lokalizacja_entry["values"] = self.lok_map
 
     def load_products(self):
         for row in self.tree.get_children():
@@ -121,7 +133,7 @@ class MagazynApp(tk.Tk):
         if not kategoria:
             messagebox.showerror("Błąd", "Kategoria nie może być pusta!")
             return
-        cena_str = self.price_entry.get().strip()
+        cena_str = self.prod_price_entry.get().strip()
         if not cena_str:
             messagebox.showerror("Błąd", "Cena nie może być pusta!")
             return
@@ -140,7 +152,7 @@ class MagazynApp(tk.Tk):
             try:
                 lokalizacja_id = int(lokalizacja_id)
             except ValueError:
-                messagebox.showerror("Błąd", "Lokalizacja musi być liczbą lub pusta!")
+                messagebox.showerror("Błąd", "Lokalizacja musi być liczbą!")
                 return
         else:
             lokalizacja_id = None
@@ -166,31 +178,124 @@ class MagazynApp(tk.Tk):
         conn.commit()
         conn.close()
 
+        # Wyczyść pola wejściowe
+        self.prod_price_entry.delete(0, "0")
+        self.qty_entry.delete(0, "0")
+        self.name_entry.delete(0, "")
+        self.kategoria_entry.delete(0, "")
+        self.lokalizacja_entry.delete(0, "")
+
         self.load_products()
         messagebox.showinfo("Sukces", "Produkt dodany!")
         self.load_products_for_order()
         self.load_operations()
 
 
-#Frame operacje
+    #Frame operacje
     def create_operacje_tab(self):
         self.operacje_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.operacje_frame, text="Operacje Magazynowe")
 
+        # LabelFrame z danymi (Treeview)
+        self.oper_data_frame = ttk.LabelFrame(self.operacje_frame, text="Lista operacji magazynowych")
+        self.oper_data_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
+        
         self.operacje_tree = ttk.Treeview(
-            self.operacje_frame,
+            self.oper_data_frame,
             columns=("ID", "ProduktID", "Typ", "Data", "Ilość", "Uwagi"),
             show="headings"
         )
         for col in self.operacje_tree["columns"]:
             self.operacje_tree.heading(col, text=col)
             self.operacje_tree.column(col, anchor="center", width=120)
-        self.operacje_tree.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+        self.operacje_tree.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
+        self.oper_data_frame.grid_rowconfigure(0, weight=1)
+        self.oper_data_frame.grid_columnconfigure(0, weight=1)
+
+        # LabelFrame z filtrami
+        self.oper_label_frame = ttk.LabelFrame(self.operacje_frame, text="Filtruj operacje")
+        self.oper_label_frame.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
+
+        # Przykładowe pola filtrujące (do rozbudowania)
+        ttk.Label(self.oper_label_frame, text="Typ operacji:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.typ_operacji_combo = ttk.Combobox(self.oper_label_frame, state="readonly", values=["", "Zamówienie", "Dostawa", "Zwrot", "Wysyłka"])
+        self.typ_operacji_combo.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+
+        ttk.Label(self.oper_label_frame, text="Data od:").grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.data_od_entry = ttk.Entry(self.oper_label_frame)
+        self.data_od_entry.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+
+        ttk.Label(self.oper_label_frame, text="Data do:").grid(row=0, column=4, padx=5, pady=5, sticky="w")
+        self.data_do_entry = ttk.Entry(self.oper_label_frame)
+        self.data_do_entry.grid(row=0, column=5, padx=5, pady=5, sticky="w")
+
+        self.filter_button = ttk.Button(self.oper_label_frame, text="Filtruj", command=self.filter_operations)
+        self.filter_button.grid(row=0, column=6, padx=10, pady=5)
+
+        reset_button = ttk.Button(self.oper_label_frame, text="Resetuj", command=self.load_operations)
+        reset_button.grid(row=0, column=7, padx=5, pady=5)
+
+        # Rozciąganie
         self.operacje_frame.grid_rowconfigure(0, weight=1)
         self.operacje_frame.grid_columnconfigure(0, weight=1)
 
         self.load_operations()
+
+
+    def filter_operations(self):
+        typ_operacji = self.typ_operacji_combo.get().strip()
+        data_od = self.data_od_entry.get().strip()
+        data_do = self.data_do_entry.get().strip()
+
+        query = "SELECT * FROM OperacjeMagazynowe WHERE 1=1"
+        params = []
+
+        # Filtr: typ operacji
+        if typ_operacji:
+            query += " AND TypOperacji = ?"
+            params.append(typ_operacji)
+
+        # Filtr: data od
+        if data_od:
+            try:
+                datetime.strptime(data_od, "%Y-%m-%d")  # walidacja daty
+                query += " AND DataOperacji >= ?"
+                params.append(data_od)
+            except ValueError:
+                messagebox.showerror("Błąd", "Nieprawidłowy format daty (Data od). Użyj YYYY-MM-DD.")
+                return
+
+        # Filtr: data do
+        if data_do:
+            try:
+                datetime.strptime(data_do, "%Y-%m-%d")  # walidacja daty
+                query += " AND DataOperacji <= ?"
+                params.append(data_do)
+            except ValueError:
+                messagebox.showerror("Błąd", "Nieprawidłowy format daty (Data do). Użyj YYYY-MM-DD.")
+                return
+
+        # Połączenie z bazą i wykonanie zapytania
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(query, params)
+            results = cursor.fetchall()
+
+            # Wyczyść drzewo i załaduj nowe dane
+            for row in self.operacje_tree.get_children():
+                self.operacje_tree.delete(row)
+
+            for row in results:
+                self.operacje_tree.insert("", "end", values=row)
+
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Błąd podczas filtrowania danych: {e}")
+        finally:
+            conn.close()
+
 
     def load_operations(self):
         for row in self.operacje_tree.get_children():
@@ -429,15 +534,24 @@ class MagazynApp(tk.Tk):
         for row in self.cart_tree.get_children():
             self.cart_tree.delete(row)
 
-        for i, item in enumerate(self.cart_items, start=1):
+        for index, item in enumerate(self.cart_items, start=1):
             self.cart_tree.insert("", "end", values=(
-                i,
+                index,
                 item["ProduktID"],
                 item["Nazwa"],
                 item["Ilosc"],
                 item["Cena"],
                 item["CenaBrutto"]
             ))
+
+        # Oblicz podsumowanie
+        total_items = len(self.cart_items)
+        total_price = sum(item["CenaBrutto"] for item in self.cart_items)
+
+        self.total_items_label.config(text=f"Łączna liczba pozycji: {total_items}")
+        self.total_price_label.config(text=f"Łączna kwota brutto: {total_price:.2f} zł")
+
+            
 
 #Frame koszyk
     def create_cart_tab(self):
@@ -458,9 +572,25 @@ class MagazynApp(tk.Tk):
             self.cart_tree.heading(col, text=col)
         self.cart_tree.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
+        
+        # Frame podsumowanie
+        self.cart_summary_frame = ttk.LabelFrame(self.cart_frame, text="Podsumowanie koszyka")
+        self.cart_summary_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        self.cart_frame.grid_rowconfigure(2, weight=0)
+
+        # Pusta etykieta jako odstęp
+        self.cart_summary_frame.columnconfigure(0, weight=1)
+
+        self.total_items_label = ttk.Label(self.cart_summary_frame, text="Łączna liczba pozycji: 0")
+        self.total_items_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+
+        self.total_price_label = ttk.Label(self.cart_summary_frame, text="Łączna kwota brutto: 0.00 zł")
+        self.total_price_label.grid(row=0, column=2, padx=10, pady=5, sticky="w")
+
+
         #frame dane
         self.cart_data_frame=ttk.LabelFrame(self.cart_frame, text="Dane")
-        self.cart_data_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        self.cart_data_frame.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
         self.cart_frame.grid_rowconfigure(0, weight=1)
 
         # Combobox z klientami
@@ -715,7 +845,7 @@ class MagazynApp(tk.Tk):
         self.pozycje_frame.grid_rowconfigure(1, weight=1)
 
         # Combobox z klientami
-        self.poz_id_combo = ttk.Combobox(self.poz_filtry_lab, state="readonly")
+        self.poz_id_combo = ttk.Combobox(self.poz_filtry_lab)
         self.poz_id_combo.grid(row=0, column=0, padx=0, pady=5, sticky="w")
         self.LoadZamowienieCombo()
 
