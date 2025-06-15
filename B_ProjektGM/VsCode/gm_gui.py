@@ -191,7 +191,7 @@ class MagazynApp(tk.Tk):
         self.load_operations()
 
 
-    #Frame operacje
+#Frame operacje
     def create_operacje_tab(self):
         self.operacje_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.operacje_frame, text="Operacje Magazynowe")
@@ -313,21 +313,23 @@ class MagazynApp(tk.Tk):
         conn.close()
 
 
-#Frame zamów
-    def create_zamow_tab(self):
+    #Frame zamów
+    def create_zamow_tab(self): 
         self.zamowienia_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.zamowienia_frame, text="Zamów")
 
-
-        #Frame produków
-        self.products_frame=ttk.LabelFrame(self.zamowienia_frame, text="Produkty", padding=1)
-        self.products_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        #Ustawienie wielkości grida produktów
+        # Ustaw skalowanie
         self.zamowienia_frame.grid_rowconfigure(0, weight=8)
+        self.zamowienia_frame.grid_rowconfigure(1, weight=1)
+        self.zamowienia_frame.grid_rowconfigure(2, weight=0)
+        self.zamowienia_frame.grid_columnconfigure(0, weight=1)
+
+        # Produkty
+        self.products_frame = ttk.LabelFrame(self.zamowienia_frame, text="Produkty", padding=1)
+        self.products_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.products_frame.grid_rowconfigure(0, weight=1)
         self.products_frame.grid_columnconfigure(0, weight=1)
-        
-        # Tabela produktów z dostępną i zamawianą ilością
+
         self.products_tree = ttk.Treeview(
             self.products_frame,
             columns=("ProduktID", "Nazwa", "Dostępna ilość", "Cena produktu"),
@@ -339,40 +341,42 @@ class MagazynApp(tk.Tk):
 
         self.load_products_for_order()
 
+        # Dane
+        self.dane_frame = ttk.LabelFrame(self.zamowienia_frame, text="Dane", padding=5)
+        self.dane_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
 
-        #Frame danych
-        self.dane_frame=ttk.LabelFrame(self.zamowienia_frame, text="Dane", padding=1)
-        self.dane_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
-        #Ustawienie wielkości grida danych
-        self.zamowienia_frame.grid_rowconfigure(1, weight=1)
+        # Konfiguracja kolumn - 6 kolumn: label + entry dla każdego pola
 
-        # Etykieta i pole ID
-        self.label_id = ttk.Label(self.dane_frame, text="ID produktu")
-        self.label_id.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
+        # ID produktu
+        self.label_id = ttk.Label(self.dane_frame, text="ID produktu:")
+        self.label_id.grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.product_SelectedId = ttk.Entry(self.dane_frame, width=10)
-        self.product_SelectedId.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        self.product_SelectedId.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-        # Etykieta i pole Ilość
-        self.label_ilosc = ttk.Label(self.dane_frame, text="Ilość")
-        self.label_ilosc.grid(row=0, column=1, padx=5, pady=(5, 0), sticky="w")
+        # Ilość
+        self.label_ilosc = ttk.Label(self.dane_frame, text="Ilość:")
+        self.label_ilosc.grid(row=0, column=2, padx=5, pady=5, sticky="w")
         self.countInput = ttk.Entry(self.dane_frame, width=10)
-        self.countInput.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        self.countInput.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
-        # Etykieta i pole Cena (readonly)
-        self.label_cena = ttk.Label(self.dane_frame, text="Cena")
-        self.label_cena.grid(row=0, column=2, padx=5, pady=(5, 0), sticky="w")
+        # Cena
+        self.label_cena = ttk.Label(self.dane_frame, text="Cena:")
+        self.label_cena.grid(row=0, column=4, padx=5, pady=5, sticky="w")
         self.price_var = tk.StringVar()
         self.price_entry = ttk.Entry(self.dane_frame, textvariable=self.price_var, width=12, state="readonly")
-        self.price_entry.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
+        self.price_entry.grid(row=0, column=5, padx=5, pady=5, sticky="w")
 
-        # Przycisk składania zamówienia
+        
+
+        # Przycisk
         order_button = ttk.Button(self.zamowienia_frame, text="Dodaj do koszyka", command=self.add_To_cart)
-        order_button.grid(row=3, column=0, columnspan=2, pady=10, sticky="n")
+        order_button.grid(row=2, column=0, columnspan=2, pady=10, sticky="ew")
 
+        # Powiązania zdarzeń
         self.product_SelectedId.bind("<KeyRelease>", self.on_id_entry)
         self.countInput.bind("<KeyRelease>", lambda e: self.update_price())
-
         self.products_tree.bind("<<TreeviewSelect>>", self.on_product_select)
+
 
     def load_clients(self, combo):
         """Wypełnia combobox listą klientów"""
@@ -450,6 +454,7 @@ class MagazynApp(tk.Tk):
                 if item["ProduktID"] == produkt_id:
                     item["Ilosc"] += ilosc
                     item["CenaBrutto"] = item["Ilosc"] * produkt_cena
+                    messagebox.showinfo("Dodano do koszyka", f"Zaktualizowano koszyk: {produkt_nazwa} ({ilosc} szt.)")
                     self.refresh_cart_tree()
                     self.load_products_for_order()
                     return
@@ -463,7 +468,7 @@ class MagazynApp(tk.Tk):
                 "Cena": produkt_cena,
                 "CenaBrutto": cena_brutto
             })
-
+            messagebox.showinfo("Dodano do koszyka", f"Dodano: {produkt_nazwa} ({ilosc} szt.)")
             self.refresh_cart_tree()
             self.load_products_for_order()
             self.load_operations()
@@ -558,50 +563,52 @@ class MagazynApp(tk.Tk):
 
             
 
-#Frame koszyk
     def create_cart_tab(self):
-        self.cart_frame=ttk.Frame(self.notebook)
+        self.cart_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.cart_frame, text="Koszyk")
-    
-        #frame Koszyk
+
+        # Konfiguracja głównego układu
+        self.cart_frame.grid_rowconfigure(0, weight=5)   # koszyk
+        self.cart_frame.grid_rowconfigure(1, weight=1)   # podsumowanie
+        self.cart_frame.grid_rowconfigure(2, weight=1)   # dane
+        self.cart_frame.grid_columnconfigure(0, weight=1)
+
+        # === Frame Koszyk ===
         self.cart_label = ttk.LabelFrame(self.cart_frame, text="Koszyk")
         self.cart_label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-        self.cart_frame.grid_rowconfigure(0, weight=5)
+        self.cart_label.grid_rowconfigure(0, weight=1)
+        self.cart_label.grid_columnconfigure(0, weight=1)
 
         self.cart_tree = ttk.Treeview(
             self.cart_label,
-            columns=("pozycja","ID Produktu", "Nazwa", "ilość", "Cena jednost", "cena brutto"),
+            columns=("pozycja", "ID Produktu", "Nazwa", "ilość", "Cena jednost", "cena brutto"),
             show="headings"
         )
         for col in self.cart_tree["columns"]:
             self.cart_tree.heading(col, text=col)
         self.cart_tree.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
 
-        
-        # Frame podsumowanie
+        # === Frame Podsumowanie ===
         self.cart_summary_frame = ttk.LabelFrame(self.cart_frame, text="Podsumowanie koszyka")
         self.cart_summary_frame.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
-        self.cart_frame.grid_rowconfigure(2, weight=0)
 
-        # Pusta etykieta jako odstęp
-        self.cart_summary_frame.columnconfigure(0, weight=1)
+        self.cart_summary_frame.grid_columnconfigure(0, weight=1)  # To wypycha resztę na prawo
+        self.cart_summary_frame.grid_columnconfigure(1, weight=0)
+        self.cart_summary_frame.grid_columnconfigure(2, weight=0)
 
         self.total_items_label = ttk.Label(self.cart_summary_frame, text="Łączna liczba pozycji: 0")
-        self.total_items_label.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+        self.total_items_label.grid(row=0, column=1, padx=10, pady=5, sticky="e")
 
         self.total_price_label = ttk.Label(self.cart_summary_frame, text="Łączna kwota brutto: 0.00 zł")
-        self.total_price_label.grid(row=0, column=2, padx=10, pady=5, sticky="w")
+        self.total_price_label.grid(row=0, column=2, padx=10, pady=5, sticky="e")
 
-
-        #frame dane
-        self.cart_data_frame=ttk.LabelFrame(self.cart_frame, text="Dane")
+        # === Frame Dane ===
+        self.cart_data_frame = ttk.LabelFrame(self.cart_frame, text="Dane")
         self.cart_data_frame.grid(row=2, column=0, padx=5, pady=5, sticky="nsew")
-        self.cart_frame.grid_rowconfigure(0, weight=1)
 
-        # Combobox z klientami
         ttk.Label(self.cart_data_frame, text="Nazwisko:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
         self.client_combo = ttk.Combobox(self.cart_data_frame, state="readonly")
-        self.client_combo.grid(row=0, column=1, padx=0, pady=5, sticky="w")
+        self.client_combo.grid(row=0, column=1, padx=0, pady=5, sticky="ew")
         self.load_clients(combo=self.client_combo)
 
         refresh_button = ttk.Button(self.cart_data_frame, text="Odśwież koszyk", command=self.refresh_cart_tree)
@@ -610,11 +617,9 @@ class MagazynApp(tk.Tk):
         zapisz_button = ttk.Button(self.cart_data_frame, text="Zapisz zamowienie", command=self.add_zamowienie)
         zapisz_button.grid(row=0, column=3, padx=5, pady=5, sticky="s")
 
-        reset_button=ttk.Button(self.cart_data_frame, text="Reset", command=self.reset_cart)
+        reset_button = ttk.Button(self.cart_data_frame, text="Reset", command=self.reset_cart)
         reset_button.grid(row=0, column=4, padx=5, pady=5, sticky="s")
 
-        #usun_button=ttk.Button(self.cart_data_frame, text="Usun wybrane", command=self.delete_position)
-        #reset_button.grid(row=0, column=3, padx=5, pady=5, sticky="s")
 
     def add_zamowienie(self):
         klient_name = self.client_combo.get()
