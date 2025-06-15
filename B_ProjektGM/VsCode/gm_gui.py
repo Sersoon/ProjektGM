@@ -1,4 +1,5 @@
 #project: Mini Allegro - System Magazynowy
+# opis
 import tkinter as tk
 from tkinter import ttk
 import os
